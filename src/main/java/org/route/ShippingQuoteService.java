@@ -1,0 +1,31 @@
+package org.route;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+
+@Service
+public class ShippingQuoteService {
+
+    private final ShippingCalculator zoneCalculator;
+    private final ShippingCalculator freeCalculator;
+    private final BigDecimal freeShippingThreshold;
+
+    // Hand-written constructor on purpose: two calculators, so one needs @Qualifier.
+    public ShippingQuoteService(ShippingCalculator zoneCalculator,
+                                @Qualifier("freeShipping") ShippingCalculator freeCalculator,
+                                @Value("${store.free-shipping-threshold}") BigDecimal freeShippingThreshold) {
+        this.zoneCalculator = zoneCalculator;
+        this.freeCalculator = freeCalculator;
+        this.freeShippingThreshold = freeShippingThreshold;
+    }
+
+    /** SHIP-02: free when the subtotal reaches the threshold and the zone is eligible. */
+    public BigDecimal quote(Governorate g, BigDecimal subtotal) {
+        boolean free = g.getZone().isFreeShippingEligible()
+                && subtotal.compareTo(freeShippingThreshold) >= 0;
+        return free ? freeCalculator.calculate(g) : zoneCalculator.calculate(g);
+    }
+}
